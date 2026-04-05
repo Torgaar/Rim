@@ -1,6 +1,6 @@
 # Rim
 The official R1m repo. 
-Copyright (c) 2026 R1m
+Copyright ©️ 2026 R1m
 
 All Rights Reserved.
 
