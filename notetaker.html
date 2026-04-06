@@ -1,68 +1,29 @@
-<!DOCTYPE html>
 <html>
 <head>
     <title>Notetaker</title>
-    <style>
-        /* Styles for slash command menu */
-        .slash-command-menu {
-            position: absolute;
-            background: white;
-            border: 1px solid #ccc;
-            z-index: 100;
-        }
-        /* Styles for time chips */
-        .time-chip {
-            display: inline-block;
-            background-color: blue;
-            color: white;
-            border-radius: 3px;
-            padding: 2px 5px;
-            margin: 0 2px;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
-    <div id='editor' contenteditable='true'></div>
-    <script>
-        function showSlashMenu(x, y) {
-            const menu = document.querySelector('.slash-command-menu');
-            menu.style.top = y + 'px';
-            menu.style.left = x + 'px';
-            menu.style.display = 'block';
-        }
-        function selectSlashCommand(cmd) {
-            // Logic to insert the command into the editor
-        }
-        function insertTimeChip(hours, minutes) {
-            const chip = document.createElement('span');
-            chip.className = 'time-chip';
-            chip.textContent = `${hours}h ${minutes}m`;
-            document.getElementById('editor').appendChild(chip);
-        }
-        function handleContentKeydown(e) {
-            if (e.key === '/') {
-                showSlashMenu(e.clientX, e.clientY);
-            }
-        }
-        function extractChipsFromContent() {
-            // Logic to extract chips from editor content
-        }
-        function restoreChipsInContent() {
-            // Logic to restore chips into editor content
-        }
-        function saveNote() {
-            // Serialize content including chips
-        }
-        function openEditor() {
-            // Restore chips when loading notes
-        }
-    </script>
-    <div class='slash-command-menu' style='display:none;'>
-        <ul>
-            <li onclick="selectSlashCommand('Command 1')">Command 1</li>
-            <li onclick="selectSlashCommand('Command 2')">Command 2</li>
-        </ul>
+    <h1>Notetaker Application</h1>
+    <div id="slash-command-menu">
+        <h2>Slash Command Menu</h2>
+        <input type="text" id="commandInput" placeholder="Type your command here..." />
+        <button onclick="executeCommand()">Execute</button>
     </div>
+    <div id="time-chip">
+        <h2>Time Chip Functionality</h2>
+        <p>Current Time: <span id="currentTime"></span></p>
+    </div>
+    <script>
+        function executeCommand() {
+            const command = document.getElementById('commandInput').value;
+            console.log('Command executed:', command);
+        }
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').innerText = now.toUTCString();
+        }
+        setInterval(updateTime, 1000);
+        updateTime();
+    </script>
 </body>
 </html>
