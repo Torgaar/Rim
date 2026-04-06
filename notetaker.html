@@ -1,29 +1,47 @@
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-    <title>Notetaker</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>R1m Notetaker</title>
+    <script>
+        // Function to add time chips
+        const addTimeChip = (time) => {
+            const chipContainer = document.getElementById('time-chips');
+            const chip = document.createElement('span');
+            chip.className = 'time-chip';
+            chip.innerText = `[TIME:${time}]`;
+            chipContainer.append(chip);
+            chip.addEventListener('click', () => chip.remove()); // Remove chip on click
+        };
+
+        // Function to handle the slash command input
+        const handleInput = (event) => {
+            if (event.key === '/') {
+                // Here we would show the slash command menu
+                const command = prompt('Enter command:');
+                if (command === 'time') {
+                    const time = prompt('Enter time (HH:MM):');
+                    addTimeChip(time);
+                }
+            }
+        };
+
+        // Add event listener to capture keypress
+        document.addEventListener('keypress', handleInput);
+    </script>
+    <style>
+        .time-chip {
+            background-color: #e0e0e0;
+            border-radius: 5px;
+            padding: 5px;
+            margin: 3px;
+            display: inline-block;
+        }
+    </style>
 </head>
 <body>
-    <h1>Notetaker Application</h1>
-    <div id="slash-command-menu">
-        <h2>Slash Command Menu</h2>
-        <input type="text" id="commandInput" placeholder="Type your command here..." />
-        <button onclick="executeCommand()">Execute</button>
-    </div>
-    <div id="time-chip">
-        <h2>Time Chip Functionality</h2>
-        <p>Current Time: <span id="currentTime"></span></p>
-    </div>
-    <script>
-        function executeCommand() {
-            const command = document.getElementById('commandInput').value;
-            console.log('Command executed:', command);
-        }
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('currentTime').innerText = now.toUTCString();
-        }
-        setInterval(updateTime, 1000);
-        updateTime();
-    </script>
+    <h1>R1m Notetaker</h1>
+    <div id="time-chips"></div>
 </body>
 </html>
