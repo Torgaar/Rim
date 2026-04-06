@@ -1,0 +1,2012 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Advanced Text Editor</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&family=Montserrat:wght@400;700&family=Fira+Mono&family=Source+Code+Pro&family=Open+Sans:wght@400;700&family=Nunito:wght@400;700&family=Quicksand:wght@400;700&family=Oswald:wght@400;700&family=Raleway:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Poppins", sans-serif;
+        background: linear-gradient(120deg, #e3f0ff 0%, #fafcff 100%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 30px;
+        min-height: 100vh;
+      }
+
+      .editor-container {
+        width: 900px;
+        max-width: 98%;
+        background: white;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+        padding: 28px 24px 24px 24px;
+        border-radius: 18px;
+        margin-top: 20px;
+      }
+
+      /* Ribbon UI */
+      .ribbon {
+        display: flex;
+        align-items: flex-end;
+        background: linear-gradient(90deg, #007bff 60%, #0056b3 100%);
+        padding: 14px 18px;
+        border-radius: 10px;
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.13);
+        margin-bottom: 18px;
+        gap: 24px;
+        position: relative;
+        flex-wrap: wrap; /* Allow ribbon items to wrap on smaller screens */
+      }
+
+      .ribbon-section {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        position: relative;
+      }
+
+      .ribbon-section:not(:last-child)::after {
+        content: "";
+        display: block;
+        height: 36px;
+        width: 2px;
+        background: rgba(255, 255, 255, 0.25);
+        margin: 0 12px;
+        border-radius: 2px;
+        position: absolute;
+        right: -18px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      /* Dropdown container */
+      .dropdown {
+        position: relative;
+        display: inline-block;
+      }
+
+      /* Dropdown trigger button */
+      .dropdown > button {
+        border: none;
+        background: transparent;
+        color: white;
+        font-size: 17px;
+        font-weight: 500;
+        cursor: pointer;
+        padding: 10px 16px;
+        border-radius: 6px;
+        transition: background 0.2s;
+        letter-spacing: 0.5px;
+        white-space: nowrap; /* Prevent button text from wrapping */
+      }
+
+      /* Hover state for dropdown trigger button */
+      .dropdown > button:hover,
+      .dropdown.active > button {
+        /* Keep button highlighted when active */
+        background: rgba(255, 255, 255, 0.18);
+      }
+
+      /* Dropdown content (initially hidden) */
+      .dropdown-content {
+        display: none; /* Hidden by default, controlled by .active class */
+        position: absolute;
+        background: #fff;
+        min-width: 170px;
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.13);
+        border-radius: 8px;
+        z-index: 100;
+        top: 110%; /* Position below the trigger button */
+        left: 0;
+        padding: 8px 0;
+        animation: fadeIn 0.18s;
+      }
+
+      /* Show dropdown content when parent .dropdown has .active class */
+      .dropdown.active > .dropdown-content {
+        display: block;
+      }
+
+      /* Nested dropdown container within a dropdown-content */
+      .dropdown-content .dropdown {
+        position: relative; /* Essential for nested positioning */
+        display: block; /* Make it take full width in the parent menu */
+      }
+
+      /* Nested dropdown content (side menu) */
+      .dropdown-content .dropdown-content {
+        top: -8px; /* Align with parent list item */
+        left: 100%; /* Position to the right of parent menu */
+        margin-left: 8px; /* Small gap between parent and child menu */
+        min-width: 160px; /* Adjust width for sub-menu */
+      }
+
+      /* Show nested dropdown content when its immediate parent .dropdown has .active class */
+      .dropdown-content .dropdown.active > .dropdown-content {
+        display: block;
+      }
+
+      /* Style for buttons within dropdown content */
+      .dropdown-content button,
+      .dropdown-content select {
+        width: 100%;
+        border: none;
+        background: transparent;
+        color: #222;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 10px 18px;
+        text-align: left;
+        transition: background 0.2s;
+        border-radius: 0;
+        white-space: nowrap; /* Prevent text wrapping inside menu items */
+        position: relative; /* For the arrow positioning, if needed */
+      }
+
+      /* Hover state for dropdown menu items */
+      .dropdown-content button:hover,
+      .dropdown-content select:hover {
+        background: #f0f4ff;
+      }
+      /* Hover state for nested dropdown menu items */
+      .dropdown-content .dropdown-content button:hover {
+        background: #e9efff; /* Slightly different hover for deeper nesting */
+      }
+
+      /* Keyframe animation for dropdown appearance */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      /* Editor */
+      .editor {
+        width: 100%;
+        min-height: 480px;
+        border: 1.5px solid #e3e8f0;
+        outline: none;
+        font-size: 20px;
+        padding: 16px;
+        border-radius: 8px;
+        background: #fafdff;
+        margin-top: 6px;
+        margin-bottom: 0;
+        transition: border 0.2s;
+        box-sizing: border-box;
+        color: #222; /* Default text color for editor content */
+        line-height: 1.5; /* Improved readability */
+        overflow-x: auto; /* Enable horizontal scroll for overflow content like wide tables/images */
+      }
+      .editor:focus {
+        border: 1.5px solid #007bff;
+        background: #fff;
+      }
+
+      /* Popups - Improved UI */
+      .popup,
+      .color-popup,
+      .highlight-popup,
+      .image-popup,
+      .table-popup,
+      .font-size-popup, /* New font size popup */
+      .save-as-popup, /* New Save As popup */
+      .import-save-popup /* New Import Save popup */ {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%) scale(1);
+        background: white;
+        padding: 24px 28px 20px 28px; /* Slightly reduced padding */
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12); /* Softer, slightly smaller shadow */
+        border-radius: 10px; /* More standard rounded corners */
+        z-index: 1000;
+        min-width: 280px; /* Adjusted min-width */
+        transition: box-shadow 0.2s, transform 0.1s;
+        border: 1px solid #d4e0e9; /* Lighter, more subtle border */
+        animation: popupAppear 0.18s;
+      }
+      @keyframes popupAppear {
+        from {
+          opacity: 0;
+          transform: translate(-50%, -56%) scale(0.94);
+        }
+        to {
+          opacity: 1;
+          transform: translate(-50%, -50%) scale(1);
+        }
+      }
+      .popup label,
+      .color-popup label,
+      .highlight-popup label,
+      .image-popup label,
+      .table-popup label,
+      .font-size-popup label,
+      .save-as-popup label,
+      .import-save-popup label {
+        font-weight: 500;
+        margin-bottom: 8px; /* Consistent margin */
+        display: block;
+        color: #444; /* Slightly lighter text for labels */
+        font-size: 15px; /* Consistent font size */
+        letter-spacing: 0.1px;
+      }
+      .popup input[type="text"],
+      .image-popup input[type="text"],
+      .table-popup input[type="number"],
+      .save-as-popup input[type="text"],
+      .save-as-popup input[type="password"],
+      .import-save-popup input[type="password"] {
+        border: 1px solid #c9d2da;
+        padding: 9px 12px; /* Adjusted padding */
+        border-radius: 6px; /* Consistent rounded corners */
+        font-size: 15px;
+        margin: 6px 0 16px 0; /* Adjusted margin */
+        width: 100%;
+        background: #fbfdff;
+        box-sizing: border-box;
+      }
+      .popup button,
+      .color-popup button,
+      .highlight-popup button,
+      .image-popup button,
+      .table-popup button,
+      .font-size-popup button,
+      .save-as-popup button,
+      .import-save-popup button {
+        margin: 6px 10px 0 0; /* Adjusted margin */
+        padding: 9px 20px; /* Adjusted padding */
+        background: linear-gradient(90deg, #007bff 65%, #0056b3 100%);
+        color: #fff;
+        border: none;
+        border-radius: 7px; /* Consistent rounded corners */
+        font-size: 15px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s, box-shadow 0.13s;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
+      }
+      .popup button:last-child,
+      .color-popup button:last-child,
+      .highlight-popup button:last-child,
+      .image-popup button:last-child,
+      .table-popup button:last-child,
+      .font-size-popup button:last-child,
+      .save-as-popup button:last-child,
+      .import-save-popup button:last-child {
+        background: #eef2f5; /* Lighter grey for cancel/close */
+        color: #6c757d; /* Softer text color */
+        border: 1px solid #d4e0e9; /* Consistent border */
+        box-shadow: none;
+        margin-right: 0;
+      }
+      .popup button:hover,
+      .color-popup button:hover,
+      .highlight-popup button:hover,
+      .image-popup button:hover,
+      .table-popup button:hover,
+      .font-size-popup button:hover,
+      .save-as-popup button:hover,
+      .import-save-popup button:hover {
+        filter: brightness(1.05);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+      }
+      .color-popup button,
+      .highlight-popup button {
+        /* Removed fixed min-width for individual buttons to allow swatches to flex */
+        margin-bottom: 8px; /* Add margin to bottom of color/highlight buttons */
+      }
+      .highlight-popup .none-btn {
+        background: #f8fafc !important; /* Very light background for 'None' */
+        color: #777 !important; /* Softer text */
+        border: 1px solid #d4e0e9 !important;
+        margin-bottom: 8px; /* Consistent margin */
+      }
+
+      /* Custom Color Input Styles */
+      .color-input-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px; /* Space above buttons */
+        margin-bottom: 10px;
+      }
+      .color-input-container label {
+        margin-bottom: 0; /* Remove bottom margin for inline label */
+        flex-grow: 1; /* Allow label to take space */
+      }
+      .color-input-container input[type="color"] {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        border: none;
+        width: 40px; /* Compact size */
+        height: 40px; /* Compact size */
+        background: none;
+        padding: 0;
+        cursor: pointer;
+        border-radius: 5px;
+        overflow: hidden; /* Hide default border on some browsers */
+      }
+      .color-input-container input[type="color"]::-webkit-color-swatch-wrapper {
+        padding: 0;
+      }
+      .color-input-container input[type="color"]::-webkit-color-swatch {
+        border: none;
+        border-radius: 5px;
+      }
+      .color-input-container input[type="color"]::-moz-color-swatch-wrapper {
+        padding: 0;
+      }
+      .color-input-container input[type="color"]::-moz-color-swatch {
+        border: none;
+        border-radius: 5px;
+      }
+
+      /* New Color Picker Swatch Styling */
+      .color-options,
+      .font-size-options {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 12px;
+      }
+      .color-swatch-wrapper {
+        display: inline-block; /* Allows items to sit next to each other */
+        border-radius: 6px;
+        overflow: hidden; /* Ensures color fills rounded corners */
+        cursor: pointer;
+        transition: transform 0.1s ease-out, box-shadow 0.1s ease-out;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      }
+      .color-swatch-wrapper:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15);
+      }
+      .color-swatch {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 75px; /* Fixed width for swatches */
+        height: 35px; /* Fixed height for swatches */
+        font-size: 13px;
+        font-weight: 500;
+        text-shadow: 0 0 2px rgba(0, 0, 0, 0.5); /* For contrast on varying backgrounds */
+      }
+      .color-swatch .color-name {
+        color: white; /* Default text color for swatch name */
+      }
+      /* Specific text colors for light swatches for better contrast */
+      .color-swatch[style*="background-color: rgb(255, 245, 157)"] .color-name, /* #fff59d (Yellow) */
+      .color-swatch[style*="background-color: rgb(165, 214, 167)"] .color-name, /* #a5d6a7 (Green) */
+      .color-swatch[style*="background-color: rgb(248, 187, 208)"] .color-name, /* #f8bbd0 (Pink) */
+      .color-swatch[style*="background-color: transparent"] .color-name, /* Transparent */
+      .color-swatch[style*="background-color: white"] .color-name {
+        /* White */
+        color: black;
+        text-shadow: none; /* No shadow needed on light backgrounds */
+      }
+
+      /* Font Size Options Styling */
+      .font-size-options button {
+        background: #f0f4ff;
+        color: #007bff;
+        border: 1px solid #d4e0e9;
+        padding: 8px 15px;
+        border-radius: 5px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background 0.15s, border-color 0.15s;
+        box-shadow: none; /* Override default button shadow for these */
+      }
+      .font-size-options button:hover {
+        background: #dae3f7;
+        border-color: #007bff;
+      }
+
+      /* Font Selection */
+      .font-select {
+        border: 1px solid #c9d2da;
+        padding: 8px 12px;
+        border-radius: 5px;
+        font-size: 15px;
+        background: #fbfdff;
+        color: #222;
+        font-family: inherit;
+        margin: 0;
+        width: 100%;
+      }
+
+      /* Custom scrollbar for editor */
+      .editor::-webkit-scrollbar {
+        width: 8px;
+        background: #e3e8f0;
+        border-radius: 8px;
+      }
+      .editor::-webkit-scrollbar-thumb {
+        background: #b3c6e0;
+        border-radius: 8px;
+      }
+
+      /* Style links in editor */
+      .editor a {
+        color: #007bff; /* Explicitly set link color */
+        text-decoration: underline;
+        cursor: pointer;
+        transition: color 0.2s;
+      }
+      .editor a:hover {
+        color: #0056b3;
+        text-decoration: underline;
+      }
+      /* Ensure text in editor generally inherits the default editor color,
+         unless explicitly styled. This helps with the "red text" bug after unlinking. */
+      .editor * {
+        color: inherit;
+        background-color: inherit;
+      }
+      /* Specific styling for heading tags in editor */
+      /* Headings are removed, so these specific rules will no longer be strictly needed,
+         but leaving them in case user decides to add them back in the future or for default browser styles. */
+      .editor h1 {
+        font-size: 2.2em;
+        font-weight: bold;
+        margin-top: 0.8em;
+        margin-bottom: 0.4em;
+      }
+      .editor h2 {
+        font-size: 1.8em;
+        font-weight: bold;
+        margin-top: 0.7em;
+        margin-bottom: 0.35em;
+      }
+      .editor h3 {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-top: 0.6em;
+        margin-bottom: 0.3em;
+      }
+      .editor h4 {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin-top: 0.5em;
+        margin-bottom: 0.25em;
+      }
+      .editor h5 {
+        font-size: 1em;
+        font-weight: bold;
+        margin-top: 0.4em;
+        margin-bottom: 0.2em;
+      }
+      .editor h6 {
+        font-size: 0.9em;
+        font-weight: bold;
+        margin-top: 0.3em;
+        margin-bottom: 0.15em;
+      }
+      .editor p {
+        margin: 0.5em 0;
+      } /* Default paragraph spacing */
+
+      /* Table styling for editor */
+      .editor table {
+        border-collapse: collapse;
+        width: 100%;
+        margin: 10px 0;
+        table-layout: fixed; /* Helps with consistent column widths */
+      }
+      .editor th,
+      .editor td {
+        border: 1px solid #ccc;
+        padding: 8px;
+        text-align: left;
+      }
+      .editor th {
+        background-color: #f2f2f2;
+      }
+      .editor img {
+        max-width: 100%; /* Ensure images don't overflow editor */
+        height: auto;
+        display: block; /* Prevent extra space below image */
+        margin: 8px 0; /* Add some margin around images */
+        border-radius: 4px;
+      }
+
+      /* Styles for the new Import Save list */
+      .saved-file-list-container {
+        max-height: 200px; /* Limit height to enable scrolling */
+        overflow-y: auto; /* Enable vertical scrolling */
+        border: 1px solid #e0e0e0;
+        border-radius: 5px;
+        margin-bottom: 15px;
+        background-color: #fcfdff;
+      }
+
+      .saved-file-item {
+        display: flex;
+        align-items: center;
+        padding: 8px 12px;
+        border-bottom: 1px solid #eee;
+        transition: background-color 0.2s;
+      }
+      .saved-file-item:last-child {
+        border-bottom: none;
+      }
+      .saved-file-item.selected {
+        background-color: #e0f2ff; /* Highlight selected item */
+        border-left: 3px solid #007bff;
+        padding-left: 9px; /* Adjust padding for border */
+      }
+      .saved-file-item:hover {
+        background-color: #f0f4ff;
+      }
+
+      .saved-file-info {
+        flex-grow: 1;
+        font-size: 14px;
+        color: #333;
+      }
+      .saved-file-info strong {
+        display: block; /* File name on its own line */
+        font-size: 15px;
+        color: #007bff;
+      }
+      .saved-file-info span {
+        font-size: 12px;
+        color: #666;
+      }
+
+      .saved-file-actions button {
+        margin-left: 8px;
+        padding: 6px 12px;
+        font-size: 13px;
+        border-radius: 5px;
+        box-shadow: none; /* Override default button shadow */
+        background: #eef2f5;
+        color: #6c757d;
+        border: 1px solid #d4e0e9;
+      }
+      .saved-file-actions button.load-btn {
+        background: #007bff;
+        color: white;
+        border-color: #007bff;
+      }
+      .saved-file-actions button.delete-btn:hover {
+        background: #f44336;
+        color: white;
+        border-color: #f44336;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="editor-container">
+      <div class="ribbon">
+        <div class="ribbon-section">
+          <div class="dropdown">
+            <button>File ▼</button>
+            <div class="dropdown-content">
+              <button onclick="newFile()">New File</button>
+              <!-- New: Save As Button -->
+              <button onclick="openSaveAsPopup()">Save As...</button>
+              <!-- New: Save Changes Button - will be dynamically hidden/shown -->
+              <button
+                id="saveChangesButton"
+                onclick="saveCurrentChanges()"
+                style="display: none"
+              >
+                Save Changes
+              </button>
+              <div class="dropdown">
+                <!-- Nested dropdown for Import -->
+                <button>Import ▶</button>
+                <div class="dropdown-content">
+                  <!-- This will be the side menu -->
+                  <button onclick="importFile('text/plain')">Import TXT</button>
+                  <button onclick="importFile('text/html')">Import HTML</button>
+                  <button
+                    onclick="importFile('application/vnd.openxmlformats-officedocument.wordprocessingml.document')"
+                  >
+                    Import Word (Plain Text)
+                  </button>
+                  <!-- New: Import Save Option -->
+                  <button onclick="openImportSavePopup()">Import Save</button>
+                </div>
+              </div>
+              <button onclick="saveText()">Save as TXT</button>
+              <button onclick="saveAsHtml()">Save as HTML</button>
+              <button onclick="copyRichText()">Copy to Rich Text</button>
+              <button onclick="exportToWord()">Export as Word</button>
+            </div>
+          </div>
+        </div>
+        <div class="ribbon-section">
+          <div class="dropdown">
+            <button>Edit ▼</button>
+            <div class="dropdown-content">
+              <button onclick="formatText('bold')"><b>Bold</b></button>
+              <button onclick="formatText('italic')"><i>Italic</i></button>
+              <button onclick="formatText('underline')">
+                <u>Underline</u>
+              </button>
+              <button onclick="openColorPopup()">Text Color</button>
+              <button onclick="openHighlightPopup()">Highlight</button>
+              <button onclick="convertLinks()">Auto-Link</button>
+              <button onclick="openPopup()">Insert Link</button>
+              <button onclick="clearFormatting()" style="color: #e53935">
+                Clear Formatting
+              </button>
+            </div>
+          </div>
+        </div>
+        <div class="ribbon-section">
+          <div class="dropdown">
+            <button>Insert ▼</button>
+            <div class="dropdown-content">
+              <div class="dropdown">
+                <!-- Nested dropdown for Insert Image -->
+                <button>Image ▶</button>
+                <div class="dropdown-content">
+                  <!-- This will be the side menu for images -->
+                  <button onclick="triggerUploadImageFromFile()">
+                    Upload Image
+                  </button>
+                  <button onclick="openImagePopup()">Image from URL</button>
+                </div>
+              </div>
+              <button onclick="openTablePopup()">Table</button>
+            </div>
+          </div>
+        </div>
+        <div class="ribbon-section">
+          <div class="dropdown">
+            <button>Format ▼</button>
+            <div class="dropdown-content">
+              <select
+                id="fontSelect"
+                class="font-select"
+                onchange="changeFont()"
+              >
+                <option value="Poppins" style="font-family: Poppins">
+                  Poppins
+                </option>
+                <option value="Arial" style="font-family: Arial">Arial</option>
+                <option value="Roboto" style="font-family: Roboto">
+                  Roboto
+                </option>
+                <option value="Montserrat" style="font-family: Montserrat">
+                  Montserrat
+                </option>
+                <option value="Open Sans" style="font-family: 'Open Sans'">
+                  Open Sans
+                </option>
+                <option value="Nunito" style="font-family: Nunito">
+                  Nunito
+                </option>
+                <option value="Quicksand" style="font-family: Quicksand">
+                  Quicksand
+                </option>
+                <option value="Oswald" style="font-family: Oswald">
+                  Oswald
+                </option>
+                <option value="Raleway" style="font-family: Raleway">
+                  Raleway
+                </option>
+                <option value="Courier New" style="font-family: 'Courier New'">
+                  Courier New
+                </option>
+                <option value="Fira Mono" style="font-family: 'Fira Mono'">
+                  Fira Mono
+                </option>
+                <option
+                  value="Source Code Pro"
+                  style="font-family: 'Source Code Pro'"
+                >
+                  Source Code Pro
+                </option>
+                <option value="Georgia" style="font-family: Georgia">
+                  Georgia
+                </option>
+                <option
+                  value="Times New Roman"
+                  style="font-family: 'Times New Roman'"
+                >
+                  Times New Roman
+                </option>
+              </select>
+
+              <!-- New: Align Side Menu -->
+              <div class="dropdown">
+                <button>Align ▶</button>
+                <div class="dropdown-content">
+                  <button onclick="textAlign('left')">Left</button>
+                  <button onclick="textAlign('center')">Center</button>
+                  <button onclick="textAlign('right')">Right</button>
+                  <button onclick="textAlign('justify')">Justify</button>
+                </div>
+              </div>
+
+              <!-- Removed: Headers Side Menu -->
+              <!-- <div class="dropdown" id="headerDropdown">
+                <button id="headerDropdownButton">Normal Text ▶</button>
+                <div class="dropdown-content">
+                  <button onclick="setHeading('p')">Normal Text</button>
+                  <button onclick="setHeading('h1')">Heading 1</button>
+                  <button onclick="setHeading('h2')">Heading 2</button>
+                  <button onclick="setHeading('h3')">Heading 3</button>
+                  <button onclick="setHeading('h4')">Heading 4</button>
+                  <button onclick="setHeading('h5')">Heading 5</button>
+                  <button onclick="setHeading('h6')">Heading 6</button>
+                </div>
+              </div> -->
+
+              <!-- New: Font Size Button -->
+              <button onclick="openFontSizePopup()">Font Size</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div contenteditable="true" class="editor" id="editor"></div>
+    </div>
+
+    <!-- Hidden file input for file operations -->
+    <input type="file" id="fileInput" style="display: none" />
+
+    <!-- Link Popup -->
+    <div class="popup" id="popup">
+      <label>Enter URL:</label>
+      <input type="text" id="linkInput" placeholder="https://example.com" />
+      <br />
+      <button onclick="insertLink()">Insert</button>
+      <button onclick="closePopup()">Cancel</button>
+    </div>
+
+    <!-- Image from URL Popup -->
+    <div class="image-popup" id="imagePopup">
+      <label>Enter Image URL:</label>
+      <input
+        type="text"
+        id="imageUrlInput"
+        placeholder="https://example.com/image.jpg"
+      />
+      <br />
+      <button onclick="insertImage()">Insert</button>
+      <button onclick="closeImagePopup()">Cancel</button>
+    </div>
+
+    <!-- Table Popup -->
+    <div class="table-popup" id="tablePopup">
+      <label>Rows:</label>
+      <input type="number" id="tableRowsInput" value="3" min="1" /><br />
+      <label>Columns:</label>
+      <input type="number" id="tableColsInput" value="3" min="1" /><br />
+      <button onclick="insertTable()">Insert</button>
+      <button onclick="closeTablePopup()">Cancel</button>
+    </div>
+
+    <!-- Color Popup -->
+    <div class="color-popup" id="colorPopup">
+      <label>Choose text color:</label>
+      <br />
+      <div class="color-options">
+        <div class="color-swatch-wrapper" onclick="setTextColor('#e53935')">
+          <span class="color-swatch" style="background-color: #e53935"
+            ><span class="color-name">Red</span></span
+          >
+        </div>
+        <div class="color-swatch-wrapper" onclick="setTextColor('#43a047')">
+          <span class="color-swatch" style="background-color: #43a047"
+            ><span class="color-name">Green</span></span
+          >
+        </div>
+        <div class="color-swatch-wrapper" onclick="setTextColor('#1e88e5')">
+          <span class="color-swatch" style="background-color: #1e88e5"
+            ><span class="color-name">Blue</span></span
+          >
+        </div>
+        <div class="color-swatch-wrapper" onclick="setTextColor('#fbc02d')">
+          <span class="color-swatch" style="background-color: #fbc02d"
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >Yellow</span
+            ></span
+          >
+        </div>
+        <div class="color-swatch-wrapper" onclick="setTextColor('#000')">
+          <span class="color-swatch" style="background-color: #000"
+            ><span class="color-name">Black</span></span
+          >
+        </div>
+        <div class="color-swatch-wrapper" onclick="setTextColor('#ffffff')">
+          <span class="color-swatch" style="background-color: #ffffff"
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >White</span
+            ></span
+          >
+        </div>
+      </div>
+      <div class="color-input-container">
+        <label for="customTextColorInput">Custom Color:</label>
+        <input
+          type="color"
+          id="customTextColorInput"
+          value="#007bff"
+          onchange="setTextColor(this.value)"
+        />
+      </div>
+      <br />
+      <button onclick="closeColorPopup()">Close</button>
+    </div>
+
+    <!-- Highlight Popup -->
+    <div class="highlight-popup" id="highlightPopup">
+      <label>Choose highlight color:</label>
+      <br />
+      <div class="color-options">
+        <div
+          class="color-swatch-wrapper"
+          onclick="setHighlightColor('#fff59d')"
+        >
+          <span class="color-swatch" style="background-color: #fff59d"
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >Yellow</span
+            ></span
+          >
+        </div>
+        <div
+          class="color-swatch-wrapper"
+          onclick="setHighlightColor('#90caf9')"
+        >
+          <span class="color-swatch" style="background-color: #90caf9"
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >Blue</span
+            ></span
+          >
+        </div>
+        <div
+          class="color-swatch-wrapper"
+          onclick="setHighlightColor('#a5d6a7')"
+        >
+          <span class="color-swatch" style="background-color: #a5d6a7"
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >Green</span
+            ></span
+          >
+        </div>
+        <div
+          class="color-swatch-wrapper"
+          onclick="setHighlightColor('#ffab91')"
+        >
+          <span class="color-swatch" style="background-color: #ffab91"
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >Orange</span
+            ></span
+          >
+        </div>
+        <div
+          class="color-swatch-wrapper"
+          onclick="setHighlightColor('#f8bbd0')"
+        >
+          <span class="color-swatch" style="background-color: #f8bbd0"
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >Pink</span
+            ></span
+          >
+        </div>
+        <div class="color-swatch-wrapper" onclick="removeHighlight()">
+          <span
+            class="color-swatch"
+            style="
+              background-color: transparent;
+              border: 1px dashed #ccc;
+              box-sizing: border-box;
+            "
+            ><span class="color-name" style="color: black; text-shadow: none"
+              >None</span
+            ></span
+          >
+        </div>
+      </div>
+      <div class="color-input-container">
+        <label for="customHighlightColorInput">Custom Color:</label>
+        <input
+          type="color"
+          id="customHighlightColorInput"
+          value="#ffff00"
+          onchange="setHighlightColor(this.value)"
+        />
+      </div>
+      <br />
+      <button onclick="closeHighlightPopup()">Close</button>
+    </div>
+
+    <!-- Font Size Popup -->
+    <div class="popup" id="fontSizePopup">
+      <label>Select Font Size:</label>
+      <div class="font-size-options">
+        <button onclick="setFontSize('12px')">12px</button>
+        <button onclick="setFontSize('14px')">14px</button>
+        <button onclick="setFontSize('16px')">16px</button>
+        <button onclick="setFontSize('18px')">18px</button>
+        <button onclick="setFontSize('20px')">20px</button>
+        <button onclick="setFontSize('24px')">24px</button>
+        <button onclick="setFontSize('28px')">28px</button>
+        <button onclick="setFontSize('32px')">32px</button>
+        <button onclick="setFontSize('36px')">36px</button>
+        <button onclick="openCustomFontSizeInput()">Custom...</button>
+      </div>
+      <div
+        id="customFontSizeInputContainer"
+        style="display: none; margin-top: 15px"
+      >
+        <label>Enter Custom Font Size (e.g., 22px):</label>
+        <input type="text" id="customFontSizeInput" placeholder="e.g., 22px" />
+        <button onclick="applyCustomFontSize()">Apply</button>
+      </div>
+      <br />
+      <button onclick="closeFontSizePopup()">Close</button>
+    </div>
+
+    <!-- Save As Popup -->
+    <div class="popup save-as-popup" id="saveAsPopup">
+      <label>File Name:</label>
+      <input type="text" id="saveAsFileName" placeholder="My Document" /><br />
+      <label>Password Protect (optional):</label>
+      <input
+        type="password"
+        id="saveAsPassword"
+        placeholder="Enter password"
+      /><br />
+      <button onclick="saveCurrentContentAs()">Save</button>
+      <button onclick="closeSaveAsPopup()">Cancel</button>
+    </div>
+
+    <!-- Import Save Popup -->
+    <div class="popup import-save-popup" id="importSavePopup">
+      <label>Saved Files:</label>
+      <div id="savedFilesListContainer" class="saved-file-list-container">
+        <!-- Saved files will be dynamically loaded here -->
+      </div>
+      <div id="importPasswordContainer" style="display: none">
+        <label for="importPassword">Password (if protected):</label>
+        <input
+          type="password"
+          id="importPassword"
+          placeholder="Enter password"
+        /><br />
+      </div>
+      <button id="loadSelectedButton" onclick="loadSelectedSavedFile()">
+        Load Selected
+      </button>
+      <button onclick="closeImportSavePopup()">Cancel</button>
+    </div>
+
+    <script>
+      let savedSelection; // Global variable to store selection
+      let currentLoadedSaveKey = null; // Stores the key of the currently loaded document from localStorage
+
+      // Define updateHeaderButtonText globally so it can be called from setHeading
+      // Removed: Function updateHeaderButtonText is no longer needed after removing heading functionality.
+      /*
+      function updateHeaderButtonText() {
+          const headerButton = document.getElementById('headerDropdownButton');
+          if (!headerButton) return;
+
+          const formatBlock = document.queryCommandValue('formatBlock');
+          let displayString = "Normal Text";
+
+          switch(formatBlock.toLowerCase()) {
+              case 'p':
+              case 'div':
+              case '':
+                  displayString = "Normal Text";
+                  break;
+              case 'h1': displayString = "Heading 1"; break;
+              case 'h2': displayString = "Heading 2"; break;
+              case 'h3': displayString = "Heading 3"; break;
+              case 'h4': displayString = "Heading 4"; break;
+              case 'h5': displayString = "Heading 5"; break;
+              case 'h6': displayString = "Heading 6"; break;
+              default:
+                  displayString = formatBlock.charAt(0).toUpperCase() + formatBlock.slice(1);
+                  if (displayString.length > 10) displayString = "Unknown";
+                  break;
+          }
+          headerButton.textContent = displayString + " ▶";
+      }
+      */
+
+      document.addEventListener("DOMContentLoaded", () => {
+        const editor = document.getElementById("editor");
+        const savedText = localStorage.getItem("editorContent");
+        if (savedText) editor.innerHTML = savedText;
+        editor.addEventListener("input", () => {
+          localStorage.setItem("editorContent", editor.innerHTML);
+          // When content changes, check if it's a loaded doc and enable Save Changes
+          updateSaveChangesButtonVisibility();
+        });
+
+        // Make links clickable in editor
+        editor.addEventListener("click", function (e) {
+          if (e.target.tagName === "A") {
+            const href = e.target.getAttribute("href");
+            if (href) {
+              window.open(href, "_blank");
+              e.preventDefault();
+            }
+          }
+        });
+
+        // Universal file input listener setup
+        const fileInput = document.getElementById("fileInput");
+        fileInput.addEventListener("change", handleFileInputChange);
+
+        // --- Dropdown Menu Logic (Click-based) ---
+        // Get all main dropdown buttons
+        document
+          .querySelectorAll(".ribbon-section > .dropdown > button")
+          .forEach((button) => {
+            button.addEventListener("click", function (event) {
+              event.stopPropagation(); // Prevent document click from closing immediately
+              const parentDropdown = this.closest(".dropdown");
+              const wasActive = parentDropdown.classList.contains("active");
+
+              // Close all other active dropdowns
+              document
+                .querySelectorAll(".dropdown.active")
+                .forEach((openDropdown) => {
+                  openDropdown.classList.remove("active");
+                });
+
+              // Toggle the 'active' class on the clicked dropdown's parent
+              if (!wasActive) {
+                parentDropdown.classList.add("active");
+              }
+            });
+          });
+
+        // Get all nested dropdown buttons (e.g., "Import ▶", "Image ▶")
+        document
+          .querySelectorAll(".dropdown-content .dropdown > button")
+          .forEach((button) => {
+            button.addEventListener("click", function (event) {
+              event.stopPropagation(); // Prevent click from bubbling up and closing parent
+              const parentDropdown = this.closest(".dropdown");
+              const wasActive = parentDropdown.classList.contains("active");
+
+              // Close other active *nested* dropdowns within the same parent dropdown-content
+              parentDropdown.parentElement
+                .querySelectorAll(".dropdown.active")
+                .forEach((openNestedDropdown) => {
+                  if (openNestedDropdown !== parentDropdown) {
+                    openNestedDropdown.classList.remove("active");
+                  }
+                });
+
+              // Toggle the 'active' class on the clicked nested dropdown's parent
+              if (!wasActive) {
+                parentDropdown.classList.add("active");
+              }
+            });
+          });
+
+        // Close all dropdowns when clicking anywhere outside a dropdown
+        document.addEventListener("click", function (event) {
+          document.querySelectorAll(".dropdown").forEach((dropdown) => {
+            if (!dropdown.contains(event.target)) {
+              dropdown.classList.remove("active");
+            }
+          });
+        });
+
+        // When a non-nested dropdown button is clicked, close all dropdowns.
+        // This is to ensure that when an action is taken (e.g., "Save as TXT"),
+        // the menus disappear.
+        document
+          .querySelectorAll(".dropdown-content button")
+          .forEach((itemButton) => {
+            // Check if this button is NOT a nested dropdown toggle
+            const parentDropdownOfItem = itemButton.closest(".dropdown");
+            // If the button is directly inside a top-level dropdown-content (not a nested dropdown)
+            if (
+              parentDropdownOfItem &&
+              parentDropdownOfItem.parentElement.classList.contains(
+                "dropdown-content"
+              ) &&
+              !parentDropdownOfItem.parentElement.parentElement.classList.contains(
+                "dropdown"
+              )
+            ) {
+              itemButton.addEventListener("click", function () {
+                // Close all top-level dropdowns
+                document
+                  .querySelectorAll(".ribbon-section > .dropdown")
+                  .forEach((dropdown) => {
+                    dropdown.classList.remove("active");
+                  });
+              });
+            }
+          });
+
+        // --- Editor Selection Change Listener for Header Button Update ---
+        // Removed: editor.addEventListener('selectionchange', updateHeaderButtonText);
+        // Initial update (removed as function is removed): updateHeaderButtonText();
+        updateSaveChangesButtonVisibility(); // Initial check for save changes button
+      });
+
+      // --- Ctrl+S / Cmd+S Listener for Save Changes ---
+      document.addEventListener("keydown", function (event) {
+        // Check for Ctrl+S (Windows/Linux) or Cmd+S (macOS)
+        if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+          event.preventDefault(); // Prevent browser's default save dialog
+          if (currentLoadedSaveKey) {
+            // If a document is loaded, perform Save Changes
+            saveCurrentChanges();
+          } else {
+            // If no document loaded, open Save As dialog
+            openSaveAsPopup();
+          }
+        }
+      });
+
+      /**
+       * Handles file input change events for both image uploads and file imports.
+       * This centralizes the logic and ensures the listener is always active.
+       */
+      function handleFileInputChange(event) {
+        console.log(
+          "handleFileInputChange triggered. File selected:",
+          event.target.files[0] ? event.target.files[0].name : "No file"
+        );
+        const file = event.target.files[0];
+        if (!file) {
+          // User cancelled file selection.
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          document.getElementById("editor").focus(); // Ensure editor has focus
+          restoreSelection(); // Always restore selection before inserting content
+
+          // Check if it's an image file
+          if (file.type.startsWith("image/")) {
+            document.execCommand(
+              "insertHTML",
+              false,
+              `<img src="${e.target.result}" alt="Uploaded Image" style="max-width:100%; height:auto;" onerror="this.onerror=null;this.src='https://placehold.co/300x200/cccccc/000000?text=Image+Load+Error';"/>`
+            );
+          } else {
+            // Assume text content for other file types
+            if (
+              file.type ===
+              "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            ) {
+              document.getElementById("editor").innerText = e.target.result;
+              console.warn(
+                "Word (.docx) files are imported as plain text. Full formatting requires server-side processing or large client-side libraries."
+              );
+            } else {
+              document.getElementById("editor").innerHTML = e.target.result;
+            }
+            localStorage.setItem(
+              "editorContent",
+              document.getElementById("editor").innerHTML
+            );
+          }
+          // A new file imported means we are not editing a saved doc anymore,
+          // unless it was an "Import Save" which sets currentLoadedSaveKey.
+          // For general file imports, clear the loaded key.
+          if (!event.target.id.includes("importSavePopup")) {
+            // Differentiate from internal importSavePopup logic
+            currentLoadedSaveKey = null;
+            updateSaveChangesButtonVisibility();
+          }
+        };
+
+        // Read file based on type
+        if (
+          file.type ===
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        ) {
+          reader.readAsText(file); // Read DOCX as text
+        } else if (file.type.startsWith("image/")) {
+          reader.readAsDataURL(file); // Read images as data URL
+        } else {
+          reader.readAsText(file); // Read other text-based files as text
+        }
+      }
+
+      // Selection preservation
+      function saveSelection() {
+        let selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+          savedSelection = selection.getRangeAt(0);
+        }
+      }
+      function restoreSelection() {
+        if (savedSelection) {
+          let selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(savedSelection);
+        }
+      }
+
+      // Formatting functions
+      function formatText(command) {
+        document.execCommand(command, false, null);
+      }
+
+      // Text Alignment
+      function textAlign(alignment) {
+        restoreSelection();
+        // The execCommand for alignment typically works on block elements (like P, DIV, H1-H6).
+        // If the contenteditable div itself has direct text nodes, it might behave unexpectedly.
+        // It's good practice to ensure the text is within <p> tags or other block elements.
+        // The editor should automatically wrap new lines in <p> by default or if 'formatBlock' is used.
+        // For 'justify' commands to work correctly across various selections, it's best to
+        // ensure the current block is a paragraph or div.
+        // First, normalize to paragraph if not already a block element to ensure consistent behavior.
+        // This is a common trick, but might alter markup slightly.
+        document.execCommand("formatBlock", false, "P"); // Ensure it's a paragraph block first
+
+        // Now apply the alignment
+        switch (alignment) {
+          case "left":
+            document.execCommand("justifyLeft", false, null);
+            break;
+          case "center":
+            document.execCommand("justifyCenter", false, null);
+            break;
+          case "right":
+            document.execCommand("justifyRight", false, null);
+            break;
+          case "justify":
+            document.execCommand("justifyFull", false, null);
+            break;
+        }
+      }
+
+      // Set Heading (Removed this function as per user request)
+      /*
+      function setHeading(blockTag) {
+        restoreSelection();
+        document.execCommand('formatBlock', false, `<${blockTag}>`);
+        updateHeaderButtonText(); // This call is also removed now
+      }
+      */
+
+      // Open Font Size Popup
+      function openFontSizePopup() {
+        saveSelection();
+        document.getElementById("fontSizePopup").style.display = "block";
+        document.getElementById("customFontSizeInputContainer").style.display =
+          "none"; // Hide custom input initially
+      }
+
+      // Close Font Size Popup
+      function closeFontSizePopup() {
+        document.getElementById("fontSizePopup").style.display = "none";
+        restoreSelection();
+      }
+
+      // Open Custom Font Size Input
+      function openCustomFontSizeInput() {
+        document.getElementById("customFontSizeInputContainer").style.display =
+          "block";
+        document.getElementById("customFontSizeInput").value = ""; // Clear input
+      }
+
+      // Apply Custom Font Size
+      function applyCustomFontSize() {
+        const customSize = document
+          .getElementById("customFontSizeInput")
+          .value.trim();
+        // Validate input (e.g., ensure it ends with 'px' or is a number)
+        if (
+          customSize &&
+          (customSize.endsWith("px") || !isNaN(parseFloat(customSize)))
+        ) {
+          setFontSize(customSize); // Call setFontSize with custom value
+        } else {
+          alert("Please enter a valid font size (e.g., '22px' or '22').");
+        }
+        closeFontSizePopup();
+      }
+
+      // Set Font Size (using span wrapping for precise pixel control)
+      function setFontSize(size) {
+        restoreSelection();
+        const editor = document.getElementById("editor");
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+
+        const range = selection.getRangeAt(0);
+        const selectedContent = range.extractContents(); // Extract selected content
+
+        // Create a span to wrap the content
+        const span = document.createElement("span");
+        // Ensure size ends with 'px' if it's just a number
+        span.style.fontSize = String(size).endsWith("px") ? size : `${size}px`;
+        span.appendChild(selectedContent);
+
+        range.insertNode(span); // Insert the wrapped content back
+
+        // Restore selection to the newly inserted content for continuity
+        selection.removeAllRanges();
+        range.selectNodeContents(span);
+        selection.addRange(range);
+
+        // After applying, hide the popup
+        // closeFontSizePopup(); // Removed this line as it's called by applyCustomFontSize already
+      }
+
+      // Clear Formatting
+      function clearFormatting() {
+        saveSelection();
+        document.execCommand("removeFormat", false, null);
+        document.execCommand("unlink", false, null); // Remove links explicitly
+        // Resetting foreColor and backColor to browser defaults or 'inherit'
+        document.execCommand("foreColor", false, "black"); // A common fallback to black
+        document.execCommand("backColor", false, "transparent"); // To remove highlight
+
+        // A more aggressive clear that removes all inline styles and font tags
+        const editor = document.getElementById("editor");
+        const range = savedSelection;
+        if (range && !range.collapsed) {
+          // Only apply to selection if it's not a collapsed cursor
+          const tempDiv = document.createElement("div");
+          tempDiv.appendChild(range.extractContents());
+          // Remove style attributes
+          tempDiv.innerHTML = tempDiv.innerHTML.replace(
+            /<(\w+)([^>]*)style="[^"]*"([^>]*)>/gi,
+            "<$1$2$3>"
+          );
+          // Remove font tags
+          tempDiv.innerHTML = tempDiv.innerHTML.replace(/<font[^>]*>/gi, "");
+          tempDiv.innerHTML = tempDiv.innerHTML.replace(/<\/font>/gi, "");
+          range.insertNode(tempDiv);
+          selection = window.getSelection();
+          selection.removeAllRanges();
+          selection.addRange(range); // Re-select original range (now cleaned)
+        } else if (range && range.collapsed) {
+          // If it's a cursor, apply to the current block or selection context
+          // For a collapsed selection (cursor), try to remove styles from the current block element.
+          // This is more complex and might require iterating up the DOM tree or using more direct commands.
+          // For simplicity, document.execCommand("removeFormat") handles most common inline styles.
+          // To strip all, one might copy content to plain text and back, but that loses all formatting.
+          console.warn(
+            "Clear Formatting on a collapsed selection might not remove all styles if they are inherited from parent block elements."
+          );
+        }
+        // Fallback for clearing whole editor if no selection
+        if (!range) {
+          editor.innerHTML = editor.innerHTML.replace(
+            /<(\w+)([^>]*)style="[^"]*"([^>]*)>/gi,
+            "<$1$2$3>"
+          );
+          editor.innerHTML = editor.innerHTML.replace(/<font[^>]*>/gi, "");
+          editor.innerHTML = editor.innerHTML.replace(/<\/font>/gi, "");
+        }
+        restoreSelection();
+      }
+
+      // Open and close popups
+      function openPopup() {
+        saveSelection();
+        document.getElementById("popup").style.display = "block";
+      }
+      function closePopup() {
+        document.getElementById("popup").style.display = "none";
+        document.getElementById("linkInput").value = "";
+        restoreSelection();
+      }
+      function openColorPopup() {
+        saveSelection();
+        document.getElementById("colorPopup").style.display = "block";
+      }
+      function closeColorPopup() {
+        document.getElementById("colorPopup").style.display = "none";
+        restoreSelection();
+      }
+      function openHighlightPopup() {
+        saveSelection();
+        document.getElementById("highlightPopup").style.display = "block";
+      }
+      function closeHighlightPopup() {
+        document.getElementById("highlightPopup").style.display = "none";
+        restoreSelection();
+      }
+
+      // Image from URL Popup functions
+      function openImagePopup() {
+        saveSelection();
+        document.getElementById("imagePopup").style.display = "block";
+      }
+      function closeImagePopup() {
+        document.getElementById("imagePopup").style.display = "none";
+        document.getElementById("imageUrlInput").value = "";
+        restoreSelection();
+      }
+      function insertImage() {
+        restoreSelection();
+        const imageUrl = document.getElementById("imageUrlInput").value.trim();
+        if (imageUrl) {
+          // Ensure styles are applied to prevent overflow and maintain aspect ratio
+          document.execCommand(
+            "insertHTML",
+            false,
+            `<img src="${imageUrl}" alt="Inserted Image" style="max-width:100%; height:auto;" onerror="this.onerror=null;this.src='https://placehold.co/300x200/cccccc/000000?text=Image+Load+Error';"/>`
+          );
+        }
+        closeImagePopup();
+      }
+
+      // Trigger upload image from file (calls the hidden file input)
+      function triggerUploadImageFromFile() {
+        saveSelection();
+        const fileInput = document.getElementById("fileInput");
+        fileInput.accept = "image/*"; // Set to accept image files
+        fileInput.value = ""; // Crucial: Clear the value to ensure 'change' event fires even if same file is selected
+        fileInput.click(); // Trigger the hidden file input click
+      }
+
+      // Table Popup functions
+      function openTablePopup() {
+        saveSelection();
+        document.getElementById("tablePopup").style.display = "block";
+      }
+      function closeTablePopup() {
+        document.getElementById("tablePopup").style.display = "none";
+        document.getElementById("tableRowsInput").value = "3";
+        document.getElementById("tableColsInput").value = "3";
+        restoreSelection();
+      }
+      function insertTable() {
+        restoreSelection();
+        const rows = parseInt(document.getElementById("tableRowsInput").value);
+        const cols = parseInt(document.getElementById("tableColsInput").value);
+
+        if (isNaN(rows) || isNaN(cols) || rows < 1 || cols < 1) {
+          console.error(
+            "Please enter valid numbers for rows and columns (minimum 1)."
+          );
+          alert("Please enter valid numbers for rows and columns (minimum 1).");
+          return;
+        }
+
+        let tableHtml = "<table><tbody>";
+        for (let i = 0; i < rows; i++) {
+          tableHtml += "<tr>";
+          for (let j = 0; j < cols; j++) {
+            tableHtml += `<td>Cell ${i + 1}-${j + 1}</td>`;
+          }
+          tableHtml += "</tr>";
+        }
+        tableHtml += "</tbody></table>";
+        document.execCommand("insertHTML", false, tableHtml);
+        closeTablePopup();
+      }
+
+      // Insert links
+      function insertLink() {
+        restoreSelection();
+        let url = document.getElementById("linkInput").value.trim();
+        if (url && !/^https?:\/\//i.test(url)) {
+          url = "https://" + url;
+        }
+        document.execCommand("createLink", false, url);
+        closePopup();
+      }
+
+      // Convert text into clickable links (applied to entire editor content)
+      function convertLinks() {
+        let editor = document.getElementById("editor");
+        let htmlContent = editor.innerHTML;
+
+        const urlPattern =
+          /(?<!=["'])((https?:\/\/|www\.)[^\s<>"']+)(?![^<]*>|[^<>]*<\/a>)/gi;
+
+        editor.innerHTML = htmlContent.replace(urlPattern, (match) => {
+          let href = match;
+          if (!/^https?:\/\//i.test(href)) href = "https://" + href;
+          return `<a href="${href}" target="_blank" rel="noopener noreferrer">${match}</a>`;
+        });
+      }
+
+      // Text color selection
+      function setTextColor(color) {
+        restoreSelection();
+        document.execCommand("foreColor", false, color);
+        const customColorInput = document.getElementById(
+          "customTextColorInput"
+        );
+        if (customColorInput) {
+          customColorInput.value = color;
+        }
+      }
+
+      // Highlight selection
+      function setHighlightColor(color) {
+        restoreSelection();
+        document.execCommand("hiliteColor", false, color);
+        const customHighlightColorInput = document.getElementById(
+          "customHighlightColorInput"
+        );
+        if (customHighlightColorInput) {
+          customHighlightColorInput.value = color;
+        }
+      }
+
+      // Remove highlight
+      function removeHighlight() {
+        restoreSelection();
+        document.execCommand("hiliteColor", false, "transparent");
+        closeHighlightPopup();
+      }
+
+      // Font selection
+      function changeFont() {
+        restoreSelection();
+        let font = document.getElementById("fontSelect").value;
+        document.execCommand("fontName", false, font);
+      }
+
+      // New file (reset content)
+      function newFile() {
+        document.getElementById("editor").innerHTML = "";
+        localStorage.removeItem("editorContent");
+        currentLoadedSaveKey = null; // No document loaded
+        updateSaveChangesButtonVisibility();
+      }
+
+      // Import file functionality (for TXT, HTML, Word)
+      function importFile(fileAcceptType) {
+        saveSelection();
+        const fileInput = document.getElementById("fileInput");
+        fileInput.accept = fileAcceptType;
+        fileInput.value = ""; // Ensure input is clear for import too
+        fileInput.click();
+      }
+
+      // Save text as TXT
+      function saveText() {
+        const text = document.getElementById("editor").innerText;
+        const blob = new Blob([text], { type: "text/plain" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "document.txt";
+        a.click();
+      }
+
+      // Save as HTML
+      function saveAsHtml() {
+        const editorContent = document.getElementById("editor").innerHTML;
+        const blob = new Blob([editorContent], { type: "text/html" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "document.html";
+        a.click();
+      }
+
+      // Copy to Rich Text (HTML)
+      function copyRichText() {
+        const editorContent = document.getElementById("editor").innerHTML;
+        // Create a temporary div to hold the HTML content
+        const tempDiv = document.createElement("div");
+        tempDiv.style.position = "absolute";
+        tempDiv.style.left = "-9999px"; // Move it off-screen
+        tempDiv.innerHTML = editorContent; // Set the HTML content
+
+        document.body.appendChild(tempDiv);
+
+        // Select the content of the temporary div
+        const range = document.createRange();
+        range.selectNodeContents(tempDiv);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+
+        try {
+          // Execute the copy command
+          const successful = document.execCommand("copy");
+          if (successful) {
+            console.log(
+              "Content copied to clipboard as rich text using document.execCommand()."
+            );
+          } else {
+            console.error(
+              "Failed to copy rich text using document.execCommand()."
+            );
+            // Fallback to Clipboard API if execCommand fails (though less likely for 'copy')
+            if (navigator.clipboard && navigator.clipboard.write) {
+              const blobHtml = new Blob([editorContent], { type: "text/html" });
+              const blobPlain = new Blob(
+                [document.getElementById("editor").innerText],
+                { type: "text/plain" }
+              );
+              const data = [
+                new ClipboardItem({
+                  "text/html": blobHtml,
+                  "text/plain": blobPlain,
+                }),
+              ];
+              navigator.clipboard
+                .write(data)
+                .then(() => console.log("Content copied via Clipboard API."))
+                .catch((err) =>
+                  console.error(
+                    "Failed to copy via Clipboard API (expected in some iframes):",
+                    err
+                  )
+                );
+            }
+          }
+        } catch (err) {
+          console.error("Error during copy operation (execCommand):", err);
+        } finally {
+          // Clean up: remove the temporary div and clear selection
+          selection.removeAllRanges();
+          document.body.removeChild(tempDiv);
+        }
+      }
+
+      // Export to Word
+      function exportToWord() {
+        const editorContent = document.getElementById("editor").innerHTML;
+        const blob = new Blob(["\ufeff", editorContent], {
+          type: "application/msword",
+        });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "document.docx";
+        a.click();
+      }
+
+      // --- New Save As Functionality ---
+
+      function openSaveAsPopup() {
+        saveSelection();
+        document.getElementById("saveAsPopup").style.display = "block";
+        // Pre-fill filename with current document.txt or a default
+        const currentFilename =
+          localStorage.getItem("lastSavedFilename") || "My Document";
+        document.getElementById("saveAsFileName").value = currentFilename;
+        document.getElementById("saveAsPassword").value = ""; // Clear password field
+      }
+
+      function closeSaveAsPopup() {
+        document.getElementById("saveAsPopup").style.display = "none";
+        restoreSelection();
+      }
+
+      function saveCurrentContentAs() {
+        const fileName = document.getElementById("saveAsFileName").value.trim();
+        const password = document.getElementById("saveAsPassword").value;
+        const editorContent = document.getElementById("editor").innerHTML;
+
+        if (!fileName) {
+          alert("Please enter a file name.");
+          console.error("Please enter a file name.");
+          return;
+        }
+
+        const saveKey = `editorSave_${fileName}`;
+        let contentToStore = editorContent;
+        let isProtected = false;
+
+        if (password) {
+          // Simple obfuscation for password protection (not strong encryption)
+          // For actual security, use a robust crypto library and proper key derivation
+          contentToStore = btoa(editorContent); // Base64 encode the content
+          isProtected = true;
+        }
+
+        const saveObject = {
+          content: contentToStore,
+          isProtected: isProtected,
+          passwordHash: password, // In a real app, hash this password securely
+          timestamp: new Date().toISOString(), // Add timestamp for better management
+        };
+
+        try {
+          localStorage.setItem(saveKey, JSON.stringify(saveObject));
+          localStorage.setItem("lastSavedFilename", fileName); // Keep track of last saved name
+          currentLoadedSaveKey = saveKey; // Mark this as the currently loaded/saved doc
+          updateSaveChangesButtonVisibility();
+          alert(`Document "${fileName}" saved successfully!`);
+          console.log(`Document "${fileName}" saved successfully!`);
+          closeSaveAsPopup();
+        } catch (e) {
+          console.error("Failed to save document:", e);
+          alert("Failed to save document. Storage might be full.");
+        }
+      }
+
+      // --- New Save Changes functionality ---
+      function updateSaveChangesButtonVisibility() {
+        const saveChangesButton = document.getElementById("saveChangesButton");
+        if (saveChangesButton) {
+          saveChangesButton.style.display = currentLoadedSaveKey
+            ? "block"
+            : "none";
+        }
+      }
+
+      function saveCurrentChanges() {
+        if (!currentLoadedSaveKey) {
+          // This should ideally not happen if button visibility is managed correctly
+          alert(
+            "No document loaded to save changes to. Use 'Save As...' instead."
+          );
+          return;
+        }
+
+        const editorContent = document.getElementById("editor").innerHTML;
+        try {
+          const existingSave = JSON.parse(
+            localStorage.getItem(currentLoadedSaveKey)
+          );
+          let contentToStore = editorContent;
+
+          if (existingSave.isProtected) {
+            contentToStore = btoa(editorContent); // Re-encode if it was protected
+          }
+
+          const updatedSaveObject = {
+            ...existingSave, // Keep existing properties like passwordHash
+            content: contentToStore,
+            timestamp: new Date().toISOString(), // Update timestamp
+          };
+
+          localStorage.setItem(
+            currentLoadedSaveKey,
+            JSON.stringify(updatedSaveObject)
+          );
+          alert(
+            `Changes to "${currentLoadedSaveKey.substring(
+              "editorSave_".length
+            )}" saved!`
+          );
+          console.log(
+            `Changes to "${currentLoadedSaveKey.substring(
+              "editorSave_".length
+            )}" saved!`
+          );
+        } catch (e) {
+          console.error("Failed to save changes to document:", e);
+          alert("Failed to save changes. Document might be corrupted.");
+        }
+      }
+
+      // --- New Import Save Functionality ---
+
+      function openImportSavePopup() {
+        saveSelection();
+        const savedFilesListContainer = document.getElementById(
+          "savedFilesListContainer"
+        );
+        savedFilesListContainer.innerHTML = ""; // Clear previous items
+        document.getElementById("importPassword").value = ""; // Clear password field
+        document.getElementById("importPasswordContainer").style.display =
+          "none"; // Hide password input initially
+        document.getElementById("loadSelectedButton").disabled = true; // Disable load button initially
+
+        let hasSaves = false;
+        const savedFiles = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key.startsWith("editorSave_")) {
+            const fileName = key.substring("editorSave_".length);
+            try {
+              const savedData = JSON.parse(localStorage.getItem(key));
+              savedFiles.push({ key, fileName, savedData });
+              hasSaves = true;
+            } catch (e) {
+              console.error(`Error parsing saved data for key ${key}:`, e);
+              // Optionally add a visual indicator for corrupted files
+            }
+          }
+        }
+
+        if (!hasSaves) {
+          savedFilesListContainer.innerHTML =
+            '<div style="padding: 15px; text-align: center; color: #777;">No saved files found.</div>';
+        } else {
+          savedFiles.sort(
+            (a, b) =>
+              new Date(b.savedData.timestamp) - new Date(a.savedData.timestamp)
+          ); // Sort by most recent
+          savedFiles.forEach((file) => {
+            const itemDiv = document.createElement("div");
+            itemDiv.className = "saved-file-item";
+            itemDiv.dataset.key = file.key; // Store key on the div
+
+            const infoDiv = document.createElement("div");
+            infoDiv.className = "saved-file-info";
+            infoDiv.innerHTML = `<strong>${file.fileName}</strong>
+                                     <span>${
+                                       file.savedData.isProtected
+                                         ? "Password Protected | "
+                                         : ""
+                                     }
+                                     Saved: ${new Date(
+                                       file.savedData.timestamp
+                                     ).toLocaleString()}</span>`;
+            itemDiv.appendChild(infoDiv);
+
+            const actionsDiv = document.createElement("div");
+            actionsDiv.className = "saved-file-actions";
+
+            const loadButton = document.createElement("button");
+            loadButton.className = "load-btn";
+            loadButton.textContent = "Load";
+            loadButton.onclick = () => selectFileToLoad(file.key); // Use a selector for direct load
+            actionsDiv.appendChild(loadButton);
+
+            const deleteButton = document.createElement("button");
+            deleteButton.className = "delete-btn";
+            deleteButton.textContent = "Delete";
+            deleteButton.onclick = (e) => {
+              e.stopPropagation(); // Prevent item selection
+              if (
+                confirm(`Are you sure you want to delete "${file.fileName}"?`)
+              ) {
+                deleteSavedFile(file.key);
+              }
+            };
+            actionsDiv.appendChild(deleteButton);
+
+            itemDiv.appendChild(actionsDiv);
+            savedFilesListContainer.appendChild(itemDiv);
+          });
+
+          // Add event listener for selecting files in the list container itself
+          savedFilesListContainer.addEventListener(
+            "click",
+            function (event) {
+              let targetItem = event.target.closest(".saved-file-item");
+              if (targetItem) {
+                // Remove 'selected' from all items
+                document
+                  .querySelectorAll(".saved-file-item")
+                  .forEach((item) => item.classList.remove("selected"));
+                // Add 'selected' to the clicked item
+                targetItem.classList.add("selected");
+
+                const selectedKey = targetItem.dataset.key;
+                const savedData = JSON.parse(localStorage.getItem(selectedKey));
+                document.getElementById(
+                  "importPasswordContainer"
+                ).style.display = savedData.isProtected ? "block" : "none";
+                document.getElementById("importPassword").value = ""; // Clear password on new selection
+                document.getElementById("loadSelectedButton").disabled = false; // Enable load button
+              }
+            },
+            { once: true }
+          ); // Make sure this listener is added only once
+
+          // Select the first item by default and update password field visibility
+          if (savedFiles.length > 0) {
+            const firstItem =
+              savedFilesListContainer.querySelector(".saved-file-item");
+            if (firstItem) {
+              firstItem.classList.add("selected");
+              const firstSavedData = JSON.parse(
+                localStorage.getItem(firstItem.dataset.key)
+              );
+              document.getElementById("importPasswordContainer").style.display =
+                firstSavedData.isProtected ? "block" : "none";
+              document.getElementById("loadSelectedButton").disabled = false;
+            }
+          }
+        }
+        document.getElementById("importSavePopup").style.display = "block";
+      }
+
+      // Function to be called when a "Load" button is clicked directly
+      function selectFileToLoad(key) {
+        // This function sets the selected key and then calls the main load function
+        // It bypasses the need for a separate 'select' element for loading
+        document.querySelectorAll(".saved-file-item").forEach((item) => {
+          if (item.dataset.key === key) {
+            item.classList.add("selected");
+          } else {
+            item.classList.remove("selected");
+          }
+        });
+        document.getElementById("importPasswordContainer").style.display =
+          JSON.parse(localStorage.getItem(key)).isProtected ? "block" : "none";
+        document.getElementById("importPassword").value = "";
+        document.getElementById("loadSelectedButton").disabled = false;
+      }
+
+      function closeImportSavePopup() {
+        document.getElementById("importSavePopup").style.display = "none";
+        restoreSelection();
+      }
+
+      function loadSelectedSavedFile() {
+        const selectedItem = document.querySelector(
+          ".saved-file-item.selected"
+        );
+        if (!selectedItem) {
+          alert("Please select a file to load.");
+          return;
+        }
+        const selectedKey = selectedItem.dataset.key;
+        const enteredPassword = document.getElementById("importPassword").value;
+
+        try {
+          const savedData = JSON.parse(localStorage.getItem(selectedKey));
+          let contentToLoad = savedData.content;
+
+          if (savedData.isProtected) {
+            if (savedData.passwordHash !== enteredPassword) {
+              // Basic password check
+              alert("Incorrect password. Please try again.");
+              return;
+            }
+            contentToLoad = atob(contentToLoad); // Decode Base64
+          }
+
+          document.getElementById("editor").innerHTML = contentToLoad;
+          localStorage.setItem("editorContent", contentToLoad); // Update current editor content
+          localStorage.setItem(
+            "lastSavedFilename",
+            selectedKey.substring("editorSave_".length)
+          ); // Update last used filename
+          currentLoadedSaveKey = selectedKey; // Set the currently loaded document key
+          updateSaveChangesButtonVisibility();
+          console.log(
+            `Document "${selectedKey.substring(
+              "editorSave_".length
+            )}" loaded successfully!`
+          );
+          alert(
+            `Document "${selectedKey.substring(
+              "editorSave_".length
+            )}" loaded successfully!`
+          );
+          closeImportSavePopup();
+        } catch (e) {
+          console.error("Failed to load document:", e);
+          alert(
+            "Failed to load document. It might be corrupted or an old format."
+          );
+        }
+      }
+
+      function deleteSavedFile(keyToDelete) {
+        try {
+          localStorage.removeItem(keyToDelete);
+          console.log(`File ${keyToDelete} deleted.`);
+          // If the currently loaded document is being deleted, reset currentLoadedSaveKey
+          if (currentLoadedSaveKey === keyToDelete) {
+            currentLoadedSaveKey = null;
+            updateSaveChangesButtonVisibility();
+            document.getElementById("editor").innerHTML = ""; // Clear editor if current doc deleted
+            localStorage.removeItem("editorContent");
+          }
+          openImportSavePopup(); // Refresh the list
+        } catch (e) {
+          console.error("Error deleting file:", e);
+          alert("Failed to delete file.");
+        }
+      }
+    </script>
+  </body>
+</html>
