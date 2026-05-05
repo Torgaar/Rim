@@ -195,6 +195,136 @@
         cursor: pointer;
       }
 
+      /* --- Mobile Responsiveness --- */
+      @media (max-width: 768px) {
+        header {
+          padding: 15px 20px;
+          flex-direction: column;
+          text-align: center;
+        }
+
+        .logo-text {
+          font-size: 2rem;
+          margin-right: 0;
+          margin-bottom: 5px;
+        }
+
+        .club-name {
+          font-size: 1.1rem;
+          letter-spacing: 2px;
+        }
+
+        .tab-nav {
+          flex-direction: column;
+          gap: 10px;
+          margin-top: 20px;
+          padding: 0 20px;
+        }
+
+        .tab-btn {
+          width: 100%;
+          padding: 12px 20px;
+          font-size: 0.9rem;
+        }
+
+        #sponsor-banner {
+          height: 80px;
+        }
+
+        .sponsor-img {
+          height: 40px;
+        }
+
+        .sponsor-name {
+          font-size: 1rem;
+        }
+
+        main {
+          margin: 30px auto;
+          padding: 0 15px;
+        }
+
+        .section-title {
+          font-size: 1.8rem;
+          margin-bottom: 30px;
+          letter-spacing: 4px;
+        }
+
+        #news-grid {
+          grid-template-columns: 1fr;
+          gap: 20px;
+        }
+
+        .news-thumb {
+          height: 180px;
+        }
+
+        .news-title {
+          font-size: 1.2rem;
+        }
+
+        .auth-card {
+          padding: 30px 20px;
+          max-width: 90vw;
+        }
+
+        .auth-card h2 {
+          font-size: 1.5rem;
+          margin-bottom: 20px;
+        }
+
+        .auth-input,
+        .auth-btn {
+          padding: 10px;
+          font-size: 0.9rem;
+        }
+
+        #chat-section {
+          margin: 40px auto;
+          padding: 0 15px;
+        }
+
+        #chat-box {
+          height: 300px;
+          padding: 15px;
+        }
+
+        .chat-msg {
+          padding-bottom: 8px;
+        }
+
+        .chat-user {
+          font-size: 0.75rem;
+        }
+
+        .chat-text {
+          font-size: 0.9rem;
+        }
+
+        #reader-modal {
+          padding: 30px 15px;
+        }
+
+        .reader-content {
+          padding: 25px;
+          width: 100%;
+        }
+
+        .close-reader {
+          font-size: 1.5rem;
+          top: 15px;
+          right: 15px;
+        }
+
+        .reader-body {
+          font-size: 1rem;
+        }
+
+        .section-title::after {
+          width: 60px;
+        }
+      }
+
       /* Auth Overlay & Popups */
       #auth-overlay,
       #popup-overlay {
@@ -543,6 +673,14 @@
         const name = document.getElementById("reg-user").value.trim();
         const pass = document.getElementById("reg-pass").value;
 
+        if (!code || !name || !pass) {
+          showPopup(
+            "Incomplete Form",
+            "Please fill in all fields to join the club.",
+          );
+          return;
+        }
+
         const strongRegex =
           /^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])(?=.{8,})/;
         if (!strongRegex.test(pass)) {
@@ -562,10 +700,18 @@
           .single();
 
         if (codeErr || !codeData) {
-          showPopup(
-            "Error",
-            "Invalid or already used access code for this First Name.",
-          );
+          if (codeErr && codeErr.code !== "PGRST116") {
+            console.error("Supabase Error:", codeErr);
+            showPopup(
+              "Connection Error",
+              "Could not verify code. Please try again.",
+            );
+          } else {
+            showPopup(
+              "Invalid Access",
+              "The code is incorrect, already used, or does not match the provided First Name.",
+            );
+          }
           return;
         }
 
@@ -578,7 +724,14 @@
           .insert([{ username: name, password: pass }]);
 
         if (userErr) {
-          showPopup("Error", "Error creating account: " + userErr.message);
+          if (userErr.code === "23505") {
+            showPopup(
+              "Account Exists",
+              "This First Name is already registered. Please log in instead.",
+            );
+          } else {
+            showPopup("Error", "Error creating account: " + userErr.message);
+          }
           return;
         }
 
@@ -587,8 +740,8 @@
       }
 
       async function attemptLogin() {
-        const name = document.getElementById("login-user").value;
-        const pass = document.getElementById("login-pass").value;
+        const name = document.getElementById("login-user").value.trim();
+        const pass = document.getElementById("login-pass").value.trim();
 
         const { data, error } = await _supabase
           .from("sec_users")
@@ -619,6 +772,7 @@
           btnL.classList.remove("active");
         } else {
           journal.style.display = "none";
+          fetchMessages(); // Refresh immediately on switch
           lounge.style.display = "block";
           btnJ.classList.remove("active");
           btnL.classList.add("active");
@@ -733,7 +887,7 @@
                         <span class="news-category">${story.category || "General"}</span>
                         <h3 class="news-title">${story.title}</h3>
                         <div style="font-size:0.7rem; color:var(--gold); margin-top:15px; border-top: 1px solid rgba(212,175,55,0.1); padding-top:10px;">
-                            READ&rarr;
+                            READ STORY &rarr;
                         </div>
                     </div>
                 </article>
